@@ -1,0 +1,105 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wordpressplugin",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -180,
+        -180
+      ],
+      "id": "e9f2d647-eddf-411b-98df-b233197e3599",
+      "name": "Webhook",
+      "webhookId": "ea5d32c1-0472-4729-b7c3-247b25fb56cd"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-3.5-turbo",
+          "mode": "list",
+          "cachedResultName": "GPT-3.5-TURBO"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.body.text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        40,
+        -180
+      ],
+      "id": "f8c1fe74-665d-4871-af95-a539544b6a72",
+      "name": "OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "BaCuhldKm0yfxl0O",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"text\": \"{{ $json.message.content }}\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.2,
+      "position": [
+        380,
+        -180
+      ],
+      "id": "bf06243e-29ef-4930-babd-45bf7ad3e436",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e93cacbd-5031-4f3f-8487-c0cc36353ac3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8b53ed126c7fd646930ddb048d12306b77ab0d700a0098e2564ca05aaacf5a0f"
+  },
+  "id": "rMvcXP27n58r1V7G",
+  "tags": []
+}
