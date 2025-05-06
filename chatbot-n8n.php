@@ -91,29 +91,52 @@ function cbn8n_handle_chat() {
         wp_send_json_error( 'Webhook no configurado' );
     }
 
-    // Llamada HTTP al webhook de n8n
+    // Llamada HTTP al webhook de n8n con mejor manejo de errores
     $response = wp_remote_post( $webhook_url, [
         'body'    => wp_json_encode( [ 'text' => $mensaje ] ),
         'headers' => [
             'Content-Type' => 'application/json',
         ],
-        'timeout' => 15,
+        'timeout' => 30, // Aumentado a 30 segundos
+        'sslverify' => false, // Desactivar verificación SSL si es necesario
+        'redirection' => 5, // Permitir hasta 5 redirecciones
     ] );
 
-    // Manejo de errores de WP_HTTP
+    // Manejo completo de errores
     if ( is_wp_error( $response ) ) {
-        wp_send_json_error( $response->get_error_message() );
+        $error_message = $response->get_error_message();
+        error_log("[CBN8N] Error en llamada a webhook: " . $error_message);
+        wp_send_json_error([
+            'message' => 'Error de conexión con el servidor',
+            'details' => $error_message
+        ]);
+    }
+
+    // Verificar código de estado HTTP
+    $status_code = wp_remote_retrieve_response_code( $response );
+    if ( $status_code !== 200 ) {
+        $error_message = wp_remote_retrieve_response_message( $response );
+        error_log("[CBN8N] Código de estado HTTP: " . $status_code . ", Mensaje: " . $error_message);
+        wp_send_json_error([
+            'message' => 'Error en la respuesta del servidor',
+            'status_code' => $status_code,
+            'details' => $error_message
+        ]);
     }
 
     // Procesa la respuesta
     $body = wp_remote_retrieve_body( $response );
     $data = json_decode( $body, true );
 
-    if ( isset( $data['reply'] ) ) {
-        wp_send_json_success( $data['reply'] );
-    } else {
-        wp_send_json_error( 'Respuesta inválida desde n8n' );
+    if ( is_wp_error( $data ) || !isset( $data['reply'] ) ) {
+        error_log("[CBN8N] Respuesta inválida: " . print_r($data, true));
+        wp_send_json_error([
+            'message' => 'Respuesta inválida desde n8n',
+            'details' => 'Formato de respuesta no esperado'
+        ]);
     }
+
+    wp_send_json_success( $data['reply'] );
 }
 
 // 7) Muestra el chatbot en todas las páginas, justo antes del cierre de </body>
