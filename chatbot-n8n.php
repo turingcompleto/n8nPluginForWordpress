@@ -1,0 +1,193 @@
+<?php
+/**
+ * Plugin Name:     n8n Integration
+ * Plugin URI:      https://faos.tech
+ * Description:     Un plugin para integrar facilmente n8n. en tus sitios y comenzar a automatizar tus tareas con wordpress.
+ * Version:         1.0.0
+ * Author:          Fausto Reyes
+ * Text Domain:     chatbot-n8n
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit; // Previene acceso directo
+}
+
+// --------------------------------------------------
+// CONSTANTES
+// --------------------------------------------------
+define( 'CBN8N_URL',  plugin_dir_url( __FILE__ ) );
+define( 'CBN8N_PATH', plugin_dir_path( __FILE__ ) );
+
+// --------------------------------------------------
+// ACTIVACIÓN / DESACTIVACIÓN
+// --------------------------------------------------
+register_activation_hook( __FILE__, 'cbn8n_activate' );
+function cbn8n_activate() {
+    // Aquí podrías crear tablas o poner opciones por defecto
+}
+
+register_deactivation_hook( __FILE__, 'cbn8n_deactivate' );
+function cbn8n_deactivate() {
+    // Limpieza si es necesario al desactivar
+}
+
+// --------------------------------------------------
+// ENCOLADO DE ASSETS (JS + CSS)
+// --------------------------------------------------
+add_action( 'wp_enqueue_scripts', 'cbn8n_enqueue_assets' );
+function cbn8n_enqueue_assets() {
+    // CSS del chatbot
+    wp_enqueue_style( 'cbn8n-style', CBN8N_URL . 'assets/css/chatbot.css' );
+
+    // JS del chatbot (depende de jQuery)
+    wp_enqueue_script(
+        'cbn8n-script',
+        CBN8N_URL . 'assets/js/chatbot.js',
+        [ 'jquery' ],
+        '1.0.0',
+        true
+    );
+
+    // Pasamos URL de admin-ajax y nonce al JS
+    wp_localize_script( 'cbn8n-script', 'CBN8N', [
+        'ajax_url' => admin_url( 'admin-ajax.php' ),
+        'nonce'    => wp_create_nonce( 'cbn8n_nonce' ),
+    ] );
+}
+
+// --------------------------------------------------
+// SHORTCODE [chatbot_n8n]
+// --------------------------------------------------
+add_shortcode( 'chatbot_n8n', 'cbn8n_chatbot_shortcode' );
+function cbn8n_chatbot_shortcode() {
+    return '
+      <div id="cbn8n-chat">
+        <div class="messages"></div>
+        <input type="text" id="cbn8n-input" placeholder="Escribe tu mensaje…" />
+        <button id="cbn8n-send">Enviar</button>
+      </div>
+    ';
+}
+
+// --------------------------------------------------
+// AJAX HANDLER: envía el mensaje a n8n y devuelve la respuesta
+// --------------------------------------------------
+add_action( 'wp_ajax_cbn8n_chat',      'cbn8n_handle_chat' );
+add_action( 'wp_ajax_nopriv_cbn8n_chat','cbn8n_handle_chat' );
+
+function cbn8n_handle_chat() {
+    // Seguridad
+    check_ajax_referer( 'cbn8n_nonce' );
+
+    // Sanitize input
+    $mensaje = sanitize_text_field( $_POST['mensaje'] ?? '' );
+    if ( empty( $mensaje ) ) {
+        wp_send_json_error( 'Mensaje vacío' );
+    }
+
+    // Obtén la URL del webhook desde la opción
+    $webhook_url = get_option( 'cbn8n_webhook_url' );
+    if ( ! $webhook_url ) {
+        wp_send_json_error( 'Webhook no configurado' );
+    }
+
+    // Llamada HTTP al webhook de n8n
+    $response = wp_remote_post( $webhook_url, [
+        'body'    => wp_json_encode( [ 'text' => $mensaje ] ),
+        'headers' => [
+            'Content-Type' => 'application/json',
+        ],
+        'timeout' => 15,
+    ] );
+
+    // Manejo de errores de WP_HTTP
+    if ( is_wp_error( $response ) ) {
+        wp_send_json_error( $response->get_error_message() );
+    }
+
+    // Procesa la respuesta
+    $body = wp_remote_retrieve_body( $response );
+    $data = json_decode( $body, true );
+
+    if ( isset( $data['reply'] ) ) {
+        wp_send_json_success( $data['reply'] );
+    } else {
+        wp_send_json_error( 'Respuesta inválida desde n8n' );
+    }
+}
+
+// 7) Muestra el chatbot en todas las páginas, justo antes del cierre de </body>
+add_action( 'wp_footer', 'cbn8n_render_chatbot_global' );
+function cbn8n_render_chatbot_global() {
+    // Sólo en frontend, no en admin
+    if ( is_admin() ) {
+        return;
+    }
+    // Llama al shortcode que ya definimos
+    echo '<div class="cbn8n-fixed-container">';
+    echo do_shortcode( '[chatbot_n8n]' );
+    echo '</div>';
+}
+
+// --------------------------------------------------
+// ADMIN: página de ajustes para configurar el webhook
+// --------------------------------------------------
+
+// 1) Añade un submenú bajo “Ajustes”
+add_action( 'admin_menu', 'cbn8n_add_settings_page' );
+function cbn8n_add_settings_page() {
+    add_options_page(
+        'Chatbot n8n',          // Título de la página
+        'Chatbot n8n',          // Texto en el menú
+        'manage_options',       // Capacidad requerida
+        'cbn8n-settings',       // Slug de la página
+        'cbn8n_settings_page'   // Función callback
+    );
+}
+
+// 2) Registra la opción en WP
+add_action( 'admin_init', 'cbn8n_register_settings' );
+function cbn8n_register_settings() {
+    register_setting(
+        'cbn8n_settings_group', // Grupo de ajustes
+        'cbn8n_webhook_url',     // Nombre de la opción
+        [
+            'type'              => 'string',
+            'sanitize_callback' => 'esc_url_raw',
+            'default'           => '',
+        ]
+    );
+}
+
+// 3) Renderiza el formulario de ajustes
+function cbn8n_settings_page() { ?>
+    <div class="wrap">
+      <h1>Chatbot n8n Settings</h1>
+      <form method="post" action="options.php">
+        <?php
+          settings_fields( 'cbn8n_settings_group' );
+        ?>
+        <table class="form-table">
+          <tr valign="top">
+            <th scope="row">
+              <label for="cbn8n_webhook_url">Webhook URL de n8n</label>
+            </th>
+            <td>
+              <input
+                type="url"
+                id="cbn8n_webhook_url"
+                name="cbn8n_webhook_url"
+                value="<?php echo esc_attr( get_option('cbn8n_webhook_url') ); ?>"
+                style="width:100%; max-width:400px;"
+              />
+              <p class="description">
+                Pega aquí la URL de tu Webhook de n8n (último nodo “Respond to Webhook”).
+              </p>
+            </td>
+          </tr>
+        </table>
+        <?php submit_button( 'Guardar Cambios' ); ?>
+      </form>
+    </div>
+<?php }
+

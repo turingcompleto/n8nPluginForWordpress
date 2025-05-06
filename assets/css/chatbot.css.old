@@ -1,0 +1,132 @@
+/* Contenedor “flotante” mejorado para pantallas de alta densidad (Retina 16") */
+.cbn8n-fixed-container {
+  position: fixed;
+  bottom: 2%;
+  right: 2%;
+  width: clamp(320px, 20vw, 480px);
+  max-height: clamp(400px, 50vh, 640px);
+  z-index: 9999;
+  pointer-events: none;
+  transform: translateZ(0);
+}
+
+/* Cuadro de diálogo */
+#cbn8n-chat {
+  pointer-events: all;
+  position: relative;
+  background: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.15);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  overflow: hidden;
+  height: 100%;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* Cabecera como pseudo-elemento */
+#cbn8n-chat::before {
+  content: "Chatbot";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: #0073aa;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 1.05rem;
+  border-top-left-radius: 1rem;
+  border-top-right-radius: 1rem;
+  z-index: 2;
+}
+
+/* Ajuste de la zona de mensajes para dejar espacio al header */
+#cbn8n-chat .messages {
+  padding: calc(1rem + 2.5rem) 1rem 1rem;
+  overflow-y: auto;
+  font-size: 0.95rem;
+}
+
+/* Burbujas de usuario y bot */
+#cbn8n-chat .msg.user {
+  background: #e1f5fe;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem 0.75rem 0.25rem 0.75rem;
+  margin-bottom: 0.75rem;
+  align-self: flex-end;
+  max-width: 85%;
+  word-wrap: break-word;
+}
+#cbn8n-chat .msg.bot {
+  background: #f1f1f1;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem 0.75rem 0.75rem 0.25rem;
+  margin-bottom: 0.75rem;
+  align-self: flex-start;
+  max-width: 85%;
+  word-wrap: break-word;
+}
+#cbn8n-chat .msg.error {
+  background: #ffebee;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  margin-bottom: 0.75rem;
+  color: #c62828;
+  font-weight: 500;
+  max-width: 85%;
+}
+
+/* Pie de chat: input y botón */
+#cbn8n-chat input,
+#cbn8n-chat button {
+  padding: 0.75rem;
+  border: none;
+  font-size: 0.9rem;
+  outline: none;
+}
+#cbn8n-chat input {
+  border-top: 1px solid #ddd;
+  width: 100%;
+}
+#cbn8n-chat button {
+  background: #0073aa;
+  color: #ffffff;
+  cursor: pointer;
+  border-top: 1px solid #006799;
+}
+#cbn8n-chat button:hover {
+  background: #006799;
+}
+
+/* Grid placement para input y botón */
+#cbn8n-chat > .messages { grid-row: 2; grid-column: 1 / -1; }
+#cbn8n-chat > input    { grid-row: 3; grid-column: 1; }
+#cbn8n-chat > button   { grid-row: 3; grid-column: 2; }
+
+/* Botón de cerrar mejorado: negro y ancho */
+#cbn8n-close {
+  position: absolute !important;
+  top: 0.75rem !important;
+  right: 0.75rem !important;
+  background: #000000 !important;
+  color: #ffffff !important;
+  width: 3rem !important;
+  height: 3rem !important;
+  line-height: 3rem !important;
+  text-align: center !important;
+  border: none !important;
+  border-radius: 0.5rem !important;
+  cursor: pointer !important;
+  z-index: 3 !important;
+}
+
+/* Retina smoothing */
+#cbn8n-chat,
+#cbn8n-chat .msg {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
