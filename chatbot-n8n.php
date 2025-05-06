@@ -32,6 +32,26 @@ function cbn8n_deactivate() {
 }
 
 // --------------------------------------------------
+// FUNCIONES DE LOGGING
+// --------------------------------------------------
+function cbn8n_log($message, $level = 'info') {
+    $log_file = CBN8N_PATH . 'logs/chatbot.log';
+    $date = date('Y-m-d H:i:s');
+    $log_message = "[$date] [$level] $message\n";
+    
+    // Crear directorio de logs si no existe
+    if (!file_exists(dirname($log_file))) {
+        mkdir(dirname($log_file), 0755, true);
+    }
+    
+    // Escribir en el log
+    file_put_contents($log_file, $log_message, FILE_APPEND);
+    
+    // También escribir en el log de WordPress
+    error_log($log_message);
+}
+
+// --------------------------------------------------
 // ENCOLADO DE ASSETS (JS + CSS)
 // --------------------------------------------------
 add_action( 'wp_enqueue_scripts', 'cbn8n_enqueue_assets' );
@@ -88,7 +108,10 @@ function cbn8n_handle_chat() {
 
     // Obtén y valida la URL del webhook
     $webhook_url = get_option( 'cbn8n_webhook_url' );
+    cbn8n_log("URL del webhook: $webhook_url");
+    
     if ( empty( $webhook_url ) ) {
+        cbn8n_log('Webhook no configurado', 'error');
         wp_send_json_error([
             'message' => 'Webhook no configurado',
             'details' => 'Por favor, configura la URL del webhook en Ajustes > Chatbot n8n'
@@ -97,6 +120,7 @@ function cbn8n_handle_chat() {
 
     // Validar que la URL sea una URL válida
     if ( ! filter_var( $webhook_url, FILTER_VALIDATE_URL ) ) {
+        cbn8n_log("URL inválida: $webhook_url", 'error');
         wp_send_json_error([
             'message' => 'URL inválida',
             'details' => 'La URL del webhook no es válida'
@@ -108,16 +132,22 @@ function cbn8n_handle_chat() {
         'body'    => wp_json_encode( [ 'text' => $mensaje ] ),
         'headers' => [
             'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+            'User-Agent' => 'WordPress/' . get_bloginfo('version') . '; ' . get_bloginfo('url'),
         ],
-        'timeout' => 30, // Aumentado a 30 segundos
-        'sslverify' => false, // Desactivar verificación SSL si es necesario
+        'timeout' => 60, // Aumentado a 60 segundos
+        'sslverify' => false, // Desactivar verificación SSL
         'redirection' => 5, // Permitir hasta 5 redirecciones
+        'blocking' => true, // Asegurar que la petición sea bloqueante
+        'follow_redirects' => true, // Seguir redirecciones
+        'httpversion' => '1.1', // Usar HTTP/1.1
+        'sslcertificates' => ABSPATH . 'wp-includes/certificates/ca-bundle.crt', // Usar certificados de WordPress
     ] );
 
     // Manejo completo de errores
     if ( is_wp_error( $response ) ) {
         $error_message = $response->get_error_message();
-        error_log("[CBN8N] Error en llamada a webhook: " . $error_message);
+        cbn8n_log("Error en llamada a webhook: $error_message", 'error');
         wp_send_json_error([
             'message' => 'Error de conexión con el servidor',
             'details' => $error_message
@@ -126,9 +156,11 @@ function cbn8n_handle_chat() {
 
     // Verificar código de estado HTTP
     $status_code = wp_remote_retrieve_response_code( $response );
+    cbn8n_log("Código de estado HTTP: $status_code");
+    
     if ( $status_code !== 200 ) {
         $error_message = wp_remote_retrieve_response_message( $response );
-        error_log("[CBN8N] Código de estado HTTP: " . $status_code . ", Mensaje: " . $error_message);
+        cbn8n_log("Error HTTP: Código $status_code - $error_message", 'error');
         wp_send_json_error([
             'message' => 'Error en la respuesta del servidor',
             'status_code' => $status_code,
@@ -139,16 +171,17 @@ function cbn8n_handle_chat() {
     // Procesa la respuesta
     $body = wp_remote_retrieve_body( $response );
     $data = json_decode( $body, true );
+    cbn8n_log("Respuesta recibida: " . print_r($data, true));
 
-    if ( is_wp_error( $data ) || !isset( $data['reply'] ) ) {
-        error_log("[CBN8N] Respuesta inválida: " . print_r($data, true));
+    if ( is_wp_error( $data ) || !isset( $data['text'] ) ) {
+        cbn8n_log("Error en la respuesta: " . print_r($data, true), 'error');
         wp_send_json_error([
             'message' => 'Respuesta inválida desde n8n',
             'details' => 'Formato de respuesta no esperado'
         ]);
     }
 
-    wp_send_json_success( $data['reply'] );
+    wp_send_json_success( $data['text'] );
 }
 
 // 7) Muestra el chatbot en todas las páginas, justo antes del cierre de </body>

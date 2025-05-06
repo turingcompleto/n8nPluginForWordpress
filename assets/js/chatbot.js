@@ -42,12 +42,24 @@ jQuery(function($) {
         mensaje: msg,
         webhook_url: CBN8N.webhook_url
       },
-      timeout: 30000, // 30 segundos
+      timeout: 60000, // 60 segundos para coincidir con el backend
       success: function(res) {
         if (res.success) {
           $messages.append(`<div class="msg bot">${res.data}</div>`);
         } else {
-          $messages.append(`<div class="msg error">Error: ${res.data.details || res.data.message}</div>`);
+          let errorMessage = 'Error: ';
+          if (res.data && typeof res.data === 'object') {
+            errorMessage += res.data.message || 'Error desconocido';
+            if (res.data.details) {
+              errorMessage += `<br><small>Detalles: ${res.data.details}</small>`;
+            }
+            if (res.data.status_code) {
+              errorMessage += `<br><small>Código: ${res.data.status_code}</small>`;
+            }
+          } else {
+            errorMessage += 'Error desconocido';
+          }
+          $messages.append(`<div class="msg error">${errorMessage}</div>`);
         }
       },
       error: function(xhr, status, error) {
@@ -58,6 +70,8 @@ jQuery(function($) {
           errorMessage = 'Error de autenticación. Por favor, recarga la página.';
         } else if (xhr.status === 404) {
           errorMessage = 'Servicio no encontrado. Contacta al administrador.';
+        } else if (xhr.status >= 500) {
+          errorMessage = 'Error del servidor. Por favor, intenta nuevamente más tarde.';
         }
         $messages.append(`<div class="msg error">${errorMessage}</div>`);
       },
