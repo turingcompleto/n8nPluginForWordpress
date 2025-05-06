@@ -9,30 +9,64 @@ jQuery(function($) {
    */
   function sendMessage() {
     const msg = $input.val().trim();
-    if (!msg) return;
+    if (!msg) {
+      $messages.append(`<div class="msg error">Por favor, escribe un mensaje.</div>`);
+      scrollToBottom();
+      return;
+    }
 
     // 1. Mostrar mensaje del usuario
-    $messages.append(`<div class="msg user">${msg}</div>`);
+    const userMsg = `<div class="msg user">${msg}</div>`;
+    $messages.append(userMsg);
     $input.val('');
     scrollToBottom();
 
+    // Deshabilitar botón y mostrar estado de carga
+    $sendBtn.prop('disabled', true).html('Enviando...');
+
     // 2. Llamada AJAX a WordPress
-    $.post(CBN8N.ajax_url, {
-      action: 'cbn8n_chat',
-      nonce: CBN8N.nonce,
-      mensaje: msg
-    })
-    .done(function(res) {
-      if (res.success) {
-        $messages.append(`<div class="msg bot">${res.data}</div>`);
-      } else {
-        $messages.append(`<div class="msg error">${res.data}</div>`);
+    // Verificar si hay una URL de webhook configurada
+    if (!CBN8N.webhook_url) {
+      $messages.append(`<div class="msg error">No se ha configurado la URL del webhook. Por favor, configúrala en Ajustes > Chatbot n8n.</div>`);
+      $sendBtn.prop('disabled', true);
+      scrollToBottom();
+      return;
+    }
+
+    $.ajax({
+      url: CBN8N.ajax_url,
+      type: 'POST',
+      data: {
+        action: 'cbn8n_chat',
+        nonce: CBN8N.nonce,
+        mensaje: msg,
+        webhook_url: CBN8N.webhook_url
+      },
+      timeout: 30000, // 30 segundos
+      success: function(res) {
+        if (res.success) {
+          $messages.append(`<div class="msg bot">${res.data}</div>`);
+        } else {
+          $messages.append(`<div class="msg error">Error: ${res.data.details || res.data.message}</div>`);
+        }
+      },
+      error: function(xhr, status, error) {
+        let errorMessage = 'Error de red. Por favor, intenta nuevamente.';
+        if (xhr.status === 0) {
+          errorMessage = 'No se puede conectar al servidor. Verifica tu conexión a internet.';
+        } else if (xhr.status === 403) {
+          errorMessage = 'Error de autenticación. Por favor, recarga la página.';
+        } else if (xhr.status === 404) {
+          errorMessage = 'Servicio no encontrado. Contacta al administrador.';
+        }
+        $messages.append(`<div class="msg error">${errorMessage}</div>`);
+      },
+      complete: function() {
+        // Restaurar botón y estado normal
+        $sendBtn.prop('disabled', false).html('Enviar');
+        scrollToBottom();
       }
-    })
-    .fail(function() {
-      $messages.append(`<div class="msg error">Error de red. Intenta nuevamente.</div>`);
-    })
-    .always(scrollToBottom);
+    });
   }
 
   /**
@@ -77,7 +111,7 @@ jQuery(function($) {
   });
 
   // (Opcional) si quieres reabrirlo desde un botón externo:
-  // jQuery('#mi-boton-abrir-chat').on('click', () => {
-  //   $('.cbn8n-fixed-container').show();
-  // });
+   jQuery('#mi-boton-abrir-chat').on('click', () => {
+     $('.cbn8n-fixed-container').show();
+   });
 });

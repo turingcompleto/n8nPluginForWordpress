@@ -50,6 +50,93 @@
   font-size: 0.95rem;
 }
 
+/* Estilos para los mensajes */
+.msg {
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  max-width: 85%;
+  word-wrap: break-word;
+}
+
+/* Mensajes del usuario */
+.msg.user {
+  background: #0073aa;
+  color: #ffffff;
+  margin-left: auto;
+}
+
+/* Mensajes del bot */
+.msg.bot {
+  background: #f0f0f0;
+  color: #333333;
+  margin-right: auto;
+}
+
+/* Mensajes de error */
+.msg.error {
+  background: #ffebee;
+  color: #c62828;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+/* Input y botón */
+#cbn8n-input {
+  padding: 0.75rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0.5rem 0;
+}
+
+#cbn8n-input:focus {
+  outline: none;
+  border-color: #0073aa;
+  box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.1);
+}
+
+#cbn8n-send {
+  padding: 0.75rem 1.5rem;
+  background: #0073aa;
+  color: #ffffff;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+#cbn8n-send:hover {
+  background: #005a8c;
+}
+
+#cbn8n-send:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+}
+
+/* Scrollbar personalizado */
+#cbn8n-chat .messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+#cbn8n-chat .messages::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+#cbn8n-chat .messages::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+#cbn8n-chat .messages::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
 /* Burbujas de usuario y bot */
 #cbn8n-chat .msg.user {
   background: #e1f5fe;

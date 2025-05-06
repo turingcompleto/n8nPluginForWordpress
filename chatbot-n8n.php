@@ -48,10 +48,11 @@ function cbn8n_enqueue_assets() {
         true
     );
 
-    // Pasamos URL de admin-ajax y nonce al JS
+    // Pasamos URL de admin-ajax, nonce y webhook al JS
     wp_localize_script( 'cbn8n-script', 'CBN8N', [
         'ajax_url' => admin_url( 'admin-ajax.php' ),
         'nonce'    => wp_create_nonce( 'cbn8n_nonce' ),
+        'webhook_url' => get_option( 'cbn8n_webhook_url', '' )
     ] );
 }
 
@@ -85,10 +86,21 @@ function cbn8n_handle_chat() {
         wp_send_json_error( 'Mensaje vacío' );
     }
 
-    // Obtén la URL del webhook desde la opción
+    // Obtén y valida la URL del webhook
     $webhook_url = get_option( 'cbn8n_webhook_url' );
-    if ( ! $webhook_url ) {
-        wp_send_json_error( 'Webhook no configurado' );
+    if ( empty( $webhook_url ) ) {
+        wp_send_json_error([
+            'message' => 'Webhook no configurado',
+            'details' => 'Por favor, configura la URL del webhook en Ajustes > Chatbot n8n'
+        ]);
+    }
+
+    // Validar que la URL sea una URL válida
+    if ( ! filter_var( $webhook_url, FILTER_VALIDATE_URL ) ) {
+        wp_send_json_error([
+            'message' => 'URL inválida',
+            'details' => 'La URL del webhook no es válida'
+        ]);
     }
 
     // Llamada HTTP al webhook de n8n con mejor manejo de errores
