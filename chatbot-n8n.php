@@ -97,8 +97,23 @@ add_action( 'wp_ajax_cbn8n_chat',      'cbn8n_handle_chat' );
 add_action( 'wp_ajax_nopriv_cbn8n_chat','cbn8n_handle_chat' );
 
 function cbn8n_handle_chat() {
-    // Seguridad
-    check_ajax_referer( 'cbn8n_nonce' );
+    // Verificar nonce
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'cbn8n_nonce')) {
+        wp_send_json_error([
+            'message' => 'Verificación de seguridad fallida',
+            'details' => 'Por favor, recarga la página y prueba nuevamente'
+        ]);
+        return;
+    }
+
+    // Verificar permisos
+    if (!current_user_can('read')) {
+        wp_send_json_error([
+            'message' => 'No tienes permisos suficientes',
+            'details' => 'Necesitas estar registrado para usar el chatbot'
+        ]);
+        return;
+    }
 
     // Sanitize input
     $mensaje = sanitize_text_field( $_POST['mensaje'] ?? '' );
@@ -129,12 +144,15 @@ function cbn8n_handle_chat() {
 
     // Llamada HTTP al webhook de n8n con mejor manejo de errores
     $response = wp_remote_post( $webhook_url, [
-        'body'    => wp_json_encode( [ 'text' => $mensaje ] ),
+        'method' => 'POST',
         'headers' => [
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
             'User-Agent' => 'WordPress/' . get_bloginfo('version') . '; ' . get_bloginfo('url'),
         ],
+        'body' => wp_json_encode([
+            'text' => $mensaje
+        ]),
         'timeout' => 60, // Aumentado a 60 segundos
         'sslverify' => false, // Desactivar verificación SSL
         'redirection' => 5, // Permitir hasta 5 redirecciones
@@ -142,6 +160,7 @@ function cbn8n_handle_chat() {
         'follow_redirects' => true, // Seguir redirecciones
         'httpversion' => '1.1', // Usar HTTP/1.1
         'sslcertificates' => ABSPATH . 'wp-includes/certificates/ca-bundle.crt', // Usar certificados de WordPress
+        'debug' => true // Habilitar depuración
     ] );
 
     // Manejo completo de errores
@@ -170,18 +189,41 @@ function cbn8n_handle_chat() {
 
     // Procesa la respuesta
     $body = wp_remote_retrieve_body( $response );
-    $data = json_decode( $body, true );
-    cbn8n_log("Respuesta recibida: " . print_r($data, true));
+    cbn8n_log("Respuesta recibida: $body");
 
-    if ( is_wp_error( $data ) || !isset( $data['text'] ) ) {
-        cbn8n_log("Error en la respuesta: " . print_r($data, true), 'error');
+    // Intentar decodificar el JSON
+    $data = json_decode($body, true);
+    
+    if (is_wp_error($data)) {
+        cbn8n_log("Error al decodificar JSON: " . print_r($data, true), 'error');
         wp_send_json_error([
-            'message' => 'Respuesta inválida desde n8n',
-            'details' => 'Formato de respuesta no esperado'
+            'message' => 'Error al procesar la respuesta',
+            'details' => 'Formato de respuesta no válido'
         ]);
     }
 
-    wp_send_json_success( $data['text'] );
+    // Verificar si la respuesta es válida
+    if (isset($data['text'])) {
+        // Si el texto está vacío, devolvemos un mensaje por defecto
+        if (empty(trim($data['text']))) {
+            $default_response = 'Lo siento, no pude procesar tu mensaje. Por favor, intenta de nuevo.';
+            cbn8n_log("Respuesta vacía, usando respuesta por defecto");
+            wp_send_json_success($default_response);
+        } else {
+            wp_send_json_success($data['text']);
+        }
+    } else {
+        // Si no tenemos texto, pero el cuerpo no está vacío, devolvemos el cuerpo
+        if (!empty(trim($body))) {
+            wp_send_json_success($body);
+        } else {
+            cbn8n_log("Formato de respuesta no reconocido: " . print_r($data, true), 'error');
+            wp_send_json_error([
+                'message' => 'Respuesta inválida desde n8n',
+                'details' => 'Formato de respuesta no esperado'
+            ]);
+        }
+    }
 }
 
 // 7) Muestra el chatbot en todas las páginas, justo antes del cierre de </body>

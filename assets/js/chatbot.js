@@ -33,6 +33,20 @@ jQuery(function($) {
       return;
     }
 
+    // Verificar si tenemos el nonce
+    if (!CBN8N.nonce) {
+      $messages.append(`<div class="msg error">Error de seguridad. Por favor, recarga la página.</div>`);
+      $sendBtn.prop('disabled', true);
+      scrollToBottom();
+      return;
+    }
+
+    console.log('Enviando mensaje:', {
+        mensaje: msg,
+        webhook_url: CBN8N.webhook_url,
+        nonce: CBN8N.nonce
+    });
+
     $.ajax({
       url: CBN8N.ajax_url,
       type: 'POST',
@@ -42,8 +56,16 @@ jQuery(function($) {
         mensaje: msg,
         webhook_url: CBN8N.webhook_url
       },
+      xhrFields: {
+        withCredentials: true
+      },
       timeout: 60000, // 60 segundos para coincidir con el backend
+      dataType: 'json', // Especificar que esperamos JSON
+      beforeSend: function(xhr) {
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+      },
       success: function(res) {
+        console.log('Respuesta exitosa:', res);
         if (res.success) {
           $messages.append(`<div class="msg bot">${res.data}</div>`);
         } else {
@@ -63,6 +85,14 @@ jQuery(function($) {
         }
       },
       error: function(xhr, status, error) {
+        console.error('Error AJAX:', {
+          status: status,
+          error: error,
+          responseText: xhr.responseText,
+          statusText: xhr.statusText,
+          readyState: xhr.readyState
+        });
+        
         let errorMessage = 'Error de red. Por favor, intenta nuevamente.';
         if (xhr.status === 0) {
           errorMessage = 'No se puede conectar al servidor. Verifica tu conexión a internet.';
@@ -73,7 +103,16 @@ jQuery(function($) {
         } else if (xhr.status >= 500) {
           errorMessage = 'Error del servidor. Por favor, intenta nuevamente más tarde.';
         }
-        $messages.append(`<div class="msg error">${errorMessage}</div>`);
+        
+        // Mostrar el error completo en el mensaje
+        $messages.append(`<div class="msg error">
+          ${errorMessage}
+          <pre style="white-space: pre-wrap; margin-top: 10px;">
+            Status: ${xhr.status}
+            Error: ${error}
+            Response: ${xhr.responseText || 'Sin respuesta'}
+          </pre>
+        </div>`);
       },
       complete: function() {
         // Restaurar botón y estado normal
