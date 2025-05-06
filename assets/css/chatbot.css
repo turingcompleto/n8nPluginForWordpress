@@ -19,8 +19,7 @@
   width: 300px;
   height: 400px;
   background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  border-radius: 20px;
   z-index: 1000;
   display: flex;
   flex-direction: column;
@@ -34,27 +33,27 @@
   scrollbar-color: #0073aa #f0f0f0;
 }
 
-/* Cabecera como pseudo-elemento */
-#cbn8n-chat::before {
-  content: "n8n integration";
-  display: block;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
+/* Estilo del header */
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 0.75rem 1rem;
   background: #0073aa;
   color: #ffffff;
-  font-weight: 600;
-  font-size: 1.05rem;
   border-top-left-radius: 1rem;
   border-top-right-radius: 1rem;
-  z-index: 2;
 }
 
-/* Ajuste de la zona de mensajes para dejar espacio al header */
+.chat-header h2 {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+/* Ajuste de la zona de mensajes */
 #cbn8n-chat .messages {
-  padding: calc(1rem + 2.5rem) 1rem 1rem;
+  padding: 1rem;
   overflow-y: auto;
   font-size: 0.95rem;
 }
@@ -193,9 +192,6 @@
   cursor: pointer;
   border-top: 1px solid #006799;
 }
-#cbn8n-chat button:hover {
-  background: #006799;
-}
 
 /* Grid placement para input y botón */
 #cbn8n-chat > .messages { grid-row: 2; grid-column: 1 / -1; }
@@ -203,18 +199,15 @@
 #cbn8n-chat > button   { grid-row: 3; grid-column: 2; }
 
 /* Botón de cerrar mejorado: negro, ancho y en esquina superior derecha */
-#cbn8n-close {
+.close-btn {
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
-  background: #000000;
-  color: #ffffff;
   width: 2.5rem;
   height: 2.5rem;
   line-height: 2.5rem;
   text-align: center;
   border: none;
-  border-radius: 0.5rem;
   cursor: pointer;
   z-index: 3;
 }

@@ -83,6 +83,10 @@ add_shortcode( 'chatbot_n8n', 'cbn8n_chatbot_shortcode' );
 function cbn8n_chatbot_shortcode() {
     return '
       <div id="cbn8n-chat">
+        <div class="chat-header">
+          <h4>n8n integration</h4>
+          <button class="close-btn" onclick="document.getElementById(\'cbn8n-chat\').style.display = \'none\';">&times;</button>
+        </div>
         <div class="messages"></div>
         <input type="text" id="cbn8n-input" placeholder="Escribe tu mensaje…" />
         <button id="cbn8n-send">Enviar</button>

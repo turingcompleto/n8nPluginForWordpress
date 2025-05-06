@@ -141,30 +141,4 @@ jQuery(function($) {
   });
 });
 
-jQuery(function($) {
-  // 1. Crea el botón de cerrar y añádelo al chat
-  const $chat = $('#cbn8n-chat');
-  const $closeBtn = $('<button id="cbn8n-close" aria-label="Cerrar chat">×</button>')
-    .css({
-      position: 'absolute',
-      top: '-81px',
-      right: '12px',
-      background: 'transparent',
-      border: 'none',
-      'font-size': '1.5rem',
-      cursor: 'pointer',
-      color: '#fff',
-      'z-index': 10
-    })
-    .appendTo($chat);
 
-  // 2. Al hacer clic, oculta todo el contenedor fijo
-  $closeBtn.on('click', function() {
-    $('.cbn8n-fixed-container').hide();
-  });
-
-  // (Opcional) si quieres reabrirlo desde un botón externo:
-   jQuery('#mi-boton-abrir-chat').on('click', () => {
-     $('.cbn8n-fixed-container').show();
-   });
-});
