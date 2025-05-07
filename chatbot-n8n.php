@@ -84,7 +84,7 @@ function cbn8n_chatbot_shortcode() {
     return '
       <div id="cbn8n-chat">
         <div class="chat-header">
-          <h4>n8n integration</h4>
+          <h4>Habla con un asistente</h4>
           <button class="close-btn" onclick="document.getElementById(\'cbn8n-chat\').style.display = \'none\';">&times;</button>
         </div>
         <div class="messages"></div>
@@ -127,6 +127,13 @@ function cbn8n_handle_chat() {
 
     // Obtén y valida la URL del webhook
     $webhook_url = get_option( 'cbn8n_webhook_url' );
+    $test_webhook_url = get_option( 'cbn8n_test_webhook_url' );
+    $use_test_webhook = get_option( 'cbn8n_use_test_webhook' );
+    
+    if ( $use_test_webhook && !empty($test_webhook_url) ) {
+        $webhook_url = $test_webhook_url;
+    }
+    
     cbn8n_log("URL del webhook: $webhook_url");
     
     if ( empty( $webhook_url ) ) {
@@ -271,6 +278,26 @@ function cbn8n_register_settings() {
             'default'           => '',
         ]
     );
+    
+    register_setting(
+        'cbn8n_settings_group',
+        'cbn8n_test_webhook_url',
+        [
+            'type'              => 'string',
+            'sanitize_callback' => 'esc_url_raw',
+            'default'           => '',
+        ]
+    );
+    
+    register_setting(
+        'cbn8n_settings_group',
+        'cbn8n_use_test_webhook',
+        [
+            'type'              => 'boolean',
+            'sanitize_callback' => 'rest_sanitize_boolean',
+            'default'           => false,
+        ]
+    );
 }
 
 // 3) Renderiza el formulario de ajustes
@@ -280,11 +307,12 @@ function cbn8n_settings_page() { ?>
       <form method="post" action="options.php">
         <?php
           settings_fields( 'cbn8n_settings_group' );
+          do_settings_sections( 'cbn8n_settings_group' );
         ?>
         <table class="form-table">
           <tr valign="top">
             <th scope="row">
-              <label for="cbn8n_webhook_url">Webhook URL de n8n</label>
+              <label for="cbn8n_webhook_url">Webhook URL de Producción</label>
             </th>
             <td>
               <input
@@ -295,7 +323,55 @@ function cbn8n_settings_page() { ?>
                 style="width:100%; max-width:400px;"
               />
               <p class="description">
-                Pega aquí la URL de tu Webhook de n8n (último nodo “Respond to Webhook”).
+                Pega aquí la URL de tu Webhook de producción de n8n.
+              </p>
+            </td>
+          </tr>
+          
+          <tr valign="top">
+            <th scope="row">
+              <label for="cbn8n_test_webhook_url">Webhook URL de Pruebas</label>
+            </th>
+            <td>
+              <input
+                type="url"
+                id="cbn8n_test_webhook_url"
+                name="cbn8n_test_webhook_url"
+                value="<?php echo esc_attr( get_option('cbn8n_test_webhook_url') ); ?>"
+                style="width:100%; max-width:400px;"
+              />
+              <p class="description">
+                Pega aquí la URL de tu Webhook de pruebas de n8n.
+              </p>
+            </td>
+          </tr>
+          
+          <tr valign="top">
+            <th scope="row">
+              <label>Selecciona el webhook</label>
+            </th>
+            <td>
+              <label>
+                <input 
+                  type="radio" 
+                  name="cbn8n_use_test_webhook" 
+                  value="0" 
+                  <?php checked(0, get_option('cbn8n_use_test_webhook'), true); ?> 
+                />
+                Producción
+              </label>
+              <br>
+              <label>
+                <input 
+                  type="radio" 
+                  name="cbn8n_use_test_webhook" 
+                  value="1" 
+                  <?php checked(1, get_option('cbn8n_use_test_webhook'), true); ?> 
+                />
+                Pruebas
+              </label>
+              <p class="description">
+                Selecciona qué webhook deseas usar.
               </p>
             </td>
           </tr>
@@ -304,4 +380,3 @@ function cbn8n_settings_page() { ?>
       </form>
     </div>
 <?php }
-
